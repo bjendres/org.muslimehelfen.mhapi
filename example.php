@@ -16,7 +16,7 @@ print_r($contact_info);
 $contribution_information = array();
 $contribution_information['contact_id'] = $contact_info['id'];
 $contribution_information['financial_type'] = 'Brunnen/Wasser';
-$contribution_information['payment_instrument'] = 'Scheck';
+$contribution_information['payment_instrument'] = 'Kreditkarte';
 $contribution_information['contribution_campaign'] = '111111';
 $contribution_information['total_amount'] = '100.00';								// needs to have two postfix digits
 $contribution_information['currency'] = 'EUR';										// or e.g.: 'CHF'
@@ -50,8 +50,12 @@ function mh_civicrm_get_contact($contact_information) {
 	curl_setopt($curl, CURLOPT_POSTFIELDS, $query);
 	curl_setopt($curl, CURLOPT_URL, $mh_civicrm_api_config['url']);
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($curl, CURLOPT_SSLVERSION, 3);
 
     $response = curl_exec($curl);
+    print_r($response);
     return json_decode($response, true);
 }
 
@@ -72,11 +76,10 @@ function mh_civicrm_create_contribution($contact_information) {
 	curl_setopt($curl, CURLOPT_POSTFIELDS, $query);
 	curl_setopt($curl, CURLOPT_URL, $mh_civicrm_api_config['url']);
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($curl, CURLOPT_SSLVERSION, 3);
 
     $response = curl_exec($curl);
     return json_decode($response, true);
 }
-
-
-
-
