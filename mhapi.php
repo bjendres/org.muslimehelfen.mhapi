@@ -2,6 +2,21 @@
 
 require_once 'mhapi.civix.php';
 
+
+/**
+ * alterAPIPermissions() hook allows you to change the permissions checked when doing API 3 calls.
+ *
+ * @author Endres, Systopia 2013
+ */
+function mhapi_civicrm_alterAPIPermissions($entity, $action, &$params, &$permissions)
+{
+	// modify permissions for MHAPI permissions API extension
+  $permissions['permissions']['getcontact'] = array('access CiviCRM', 'add contacts');
+  $permissions['permissions']['addcontribution'] = array('access CiviCRM', 'access CiviContribute', 'edit contributions', 'make online contributions');
+}
+
+
+
 /**
  * Implementation of hook_civicrm_config
  */
