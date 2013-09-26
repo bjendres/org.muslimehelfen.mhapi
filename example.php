@@ -10,6 +10,7 @@ $contact_information = array();
 $contact_information['email'] = 'someguy@somewhere.nil';
 $contact_information['first_name'] = 'Björn';
 $contact_information['last_name'] = 'Endres';
+$contact_information['create_if_not_found'] = '1';
 $contact_info = mh_civicrm_get_contact($contact_information);
 print_r($contact_info);
 
