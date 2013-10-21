@@ -46,7 +46,7 @@ function civicrm_api3_mh_api_getcontact($params) {
 
 		if ($similarity >= $fuzzy_match_threshold) {
 			// found a match!
-			$contact_id = $candidate_data['contact_id'];
+			$contact_id = $candidate_data['id'];
 			$contact_data = $candidate_data;
 			break;
 		}
@@ -65,7 +65,7 @@ function civicrm_api3_mh_api_getcontact($params) {
 			return civicrm_api3_create_error("API Error: ".$create_result['error_message']);
 		} else {
 			$contact_data = $create_result['values'][0];
-			$contact_id = $contact_data['contact_id'];
+			$contact_id = $contact_data['id'];
 		}
 	}
 
@@ -89,7 +89,7 @@ function civicrm_api3_mh_api_getcontact($params) {
 
 	// reply 
 	$reply = array();
-	$reply['contact_id'] = $contact_data['contact_id'];
+	$reply['contact_id'] = $contact_data['id'];
 	$reply['external_identifier'] = $contact_data['external_identifier'];
 
 	return civicrm_api3_create_success(array($contact_id => $reply), array(), 'MhApi', 'getcontact');
