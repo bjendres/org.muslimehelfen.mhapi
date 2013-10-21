@@ -11,6 +11,7 @@ $contact_information['email'] = 'someguy@somewhere.nil';
 $contact_information['first_name'] = 'Björn';
 $contact_information['last_name'] = 'Endres';
 $contact_information['create_if_not_found'] = '1';
+$contact_information['contact_type'] = 'Individual';
 $contact_info = mh_civicrm_get_contact($contact_information);
 print_r($contact_info);
 
@@ -71,7 +72,6 @@ function mh_civicrm_create_contribution($contact_information) {
 	$query['version'] = 3;
 	$query['entity'] = 'MhApi';
 	$query['action'] = 'addcontribution';
-	print_r($query);
 	$curl = curl_init();
 	curl_setopt($curl, CURLOPT_POST, 1);
 	curl_setopt($curl, CURLOPT_POSTFIELDS, $query);
