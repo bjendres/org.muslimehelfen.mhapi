@@ -111,8 +111,13 @@ function civicrm_api3_mh_api_getcontact($params) {
 			}
 		}
 
-		// TODO: create phone number
-
+		// create phone number
+		if ($params['phone']) {
+			$create_phone = civicrm_api('Phone', 'create', array("contact_id" => $contact_id, "phone" => $params['phone'], "version" => 3));
+			if ($create_phone['is_error']) {
+				error_log("org.muslimehelfen.mhapi: API Error while creating phone for contact $contact_id: ".$create_address_result['error_message']);
+			}
+		}
 
 		// tag new contact for review
 		$tag_search = civicrm_api('Tag', 'getsingle', array("name" => $new_contact_tag_name, "version" => 3));
