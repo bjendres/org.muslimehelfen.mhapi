@@ -155,6 +155,9 @@ function civicrm_api3_mh_api_getcontact($params) {
 			}
 		}
 
+		// FIXME: there is still a bug with the country...disable for the moment
+		if (isset($differing_attributes['country'])) unset($differing_attributes['country']);
+
 		// create activity only of differing attributes were detected!
 		if (count($differing_attributes) > 0) {
 			// retrieve activity ID 
