@@ -218,9 +218,6 @@ function civicrm_api3_mh_api_getcontact($params) {
  * 
  */
 function civicrm_api3_mh_api_addcontribution($params) {
-	// REMOVE: create only test contributions
-	$params['is_test'] = '1';
-
 	// look up payment type
 	if (!isset($params['payment_instrument_id'])) {
 		if (!isset($params['payment_instrument'])) {
@@ -282,6 +279,8 @@ function civicrm_api3_mh_api_addcontribution($params) {
 	// finally, create contribution
 	$params['version'] = 3;
 	$params['sequential'] = 1;
+	$params['receive_date'] = date('YmdHis');
+	$params['source'] = "Online-Spende";
 	unset($params['check_permissions']);
 	$create_contribution = civicrm_api('Contribution', 'create', $params);
 	if ($create_contribution['is_error']) {
