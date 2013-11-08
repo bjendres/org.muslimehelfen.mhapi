@@ -26,7 +26,7 @@ print_r($contact_info);
 if ($contact_info['id']) {
 	$contribution_information = array();
 	$contribution_information['contact_id'] = $contact_info['id'];
-	$contribution_information['financial_type'] = 'Brunnen/Wasser';
+	$contribution_information['financial_type'] = 'Ramadanhilfe';
 	$contribution_information['payment_instrument'] = 'Kreditkarte';					
 	$contribution_information['contribution_campaign'] = '111111';
 	$contribution_information['total_amount'] = '100.00';								// needs to have two postfix digits

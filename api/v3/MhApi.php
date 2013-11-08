@@ -226,6 +226,21 @@ function civicrm_api3_mh_api_getcontact($params) {
  * 
  */
 function civicrm_api3_mh_api_addcontribution($params) {
+	$FINANCIAL_TYP_MAPPING = array(
+		"Brunnen" 					=> "Brunnen/Wasser",
+		"Fidjah/Kaffara"			=> "Fijah/Kaffara",
+		"Iftarpaket"				=> "Spende ungebunden",
+		"Meine Schwestern"			=> "Spende ungebunden",
+		"Nothilfe"					=> "Not- und Katastrophenhilfe",
+		"Ramadan-Paket"				=> "Ramadan",
+		"Ramadanhilfe"				=> "Ramadan",
+		"Sadaqa/Spende"				=> "Spende ungebunden",
+		"Selbsthilfe"				=> "Spende ungebunden",
+		"Winterhilfe"				=> "Spende ungebunden",
+		"Wo es am nötigsten ist"	=> "Spende ungebunden",
+		"Zakatu-l-Fitr"				=> "Zakau-l-fitr"
+	);
+	
 	// look up payment type
 	if (!isset($params['payment_instrument_id'])) {
 		if (!isset($params['payment_instrument'])) {
@@ -253,6 +268,12 @@ function civicrm_api3_mh_api_addcontribution($params) {
 	}	
 
 	// look up financial type id
+	error_log($params['financial_type']);
+	if (isset($params['financial_type']) && isset($FINANCIAL_TYP_MAPPING[$params['financial_type']])) {
+		$params['financial_type'] = $FINANCIAL_TYP_MAPPING[$params['financial_type']];
+		error_log($params['financial_type']);
+	}
+
 	if (!isset($params['financial_type_id'])) {
 		if (!isset($params['financial_type'])) {
 			return civicrm_api3_create_error("Neither financial_type nor financial_type_id given.");
