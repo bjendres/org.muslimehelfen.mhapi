@@ -17,10 +17,9 @@ function civicrm_api3_mh_api_getcontact($params) {
 	$new_contact_tag_name = "Neuer Kontakt";
 	$new_address_location = "Privat";
 	$activity_type_name = "Adressprüfung";
-
-	$contact_parameters = ['email', 'first_name', 'last_name', 'contact_type', 'prefix', 'gender'];
-	$contact_address_parameters = ['street_address', 'country', 'postal_code', 'city'];
-	$contact_phone_parameters = ['phone'];
+	$contact_parameters = array('email', 'first_name', 'last_name', 'contact_type', 'prefix', 'gender');
+	$contact_address_parameters = array('street_address', 'country', 'postal_code', 'city');
+	$contact_phone_parameters = array('phone');
 	$id2country = CRM_Core_PseudoConstant::country();
 	$country2id = array_flip($id2country);
 	
@@ -80,6 +79,7 @@ function civicrm_api3_mh_api_getcontact($params) {
 		$create_query = array_section($params, $contact_parameters);
 		$create_query['version'] = 3;
 		$create_query['sequential'] = 1;
+		$create_query['source'] = 'Website';
 		$create_result = civicrm_api('Contact', 'create', $create_query);
 		if ($create_result['is_error']) {
 			error_log("org.muslimehelfen.mhapi: API Error: ".$create_result['error_message']);
@@ -145,7 +145,7 @@ function civicrm_api3_mh_api_getcontact($params) {
 		// generate a list of differing values
 		$contact_data['country'] = $id2country[$contact_data['country_id']];
 		$differing_attributes = array();
-		foreach ([$contact_parameters, $contact_address_parameters, $contact_phone_parameters] as $parameter_list) {
+		foreach (array($contact_parameters, $contact_address_parameters, $contact_phone_parameters) as $parameter_list) {
 			foreach ($parameter_list as $key) {
 				if ($params[$key]) {
 					if (strtolower($params[$key])!=strtolower($contact_data[$key])) {
@@ -254,7 +254,11 @@ function civicrm_api3_mh_api_addcontribution($params) {
 		}
 	}
 
-	// look up contribution status
+	// set contribution status to 2 (Pending)
+	$params['contribution_status_id'] = 2;
+	$params['is_pay_later'] = 1;
+	if (!isset($params['contribution_status'])) unset($params['contribution_status']);
+	/* setting of status by parameter disabled
 	if (!isset($params['contribution_status_id'])) {
 		if (!isset($params['contribution_status'])) {
 			return civicrm_api3_create_error("Neither contribution_status nor contribution_status_id given.");
@@ -265,7 +269,7 @@ function civicrm_api3_mh_api_addcontribution($params) {
 			}
 			unset($params['contribution_status']);
 		}
-	}	
+	}*/
 
 	// look up financial type id
 	error_log($params['financial_type']);
@@ -305,16 +309,35 @@ function civicrm_api3_mh_api_addcontribution($params) {
 		}
 	}
 
-	// finally, create contribution
+	// then, create the contribution
 	$params['version'] = 3;
 	$params['sequential'] = 1;
 	$params['receive_date'] = date('YmdHis');
-	$params['source'] = "Webseite";
+	$params['source'] = "Online-Spende";
 	unset($params['check_permissions']);
 	$create_contribution = civicrm_api('Contribution', 'create', $params);
 	if ($create_contribution['is_error']) {
 		return civicrm_api3_create_error("API Error: ".$create_contribution['error_message']);
 	} else {
+
+		// check for notes
+		if (isset($params['notes'])) {
+			if ($params['notes']==' /   / ') $params['notes']='';
+			if (strlen($params['notes'])>0) {
+				// add note
+				$create_note = array();
+				$create_note['version'] = 3;
+				$create_note['sequential'] = 1;
+				$create_note['entity_table'] = 'civicrm_contribution';
+				$create_note['entity_id'] = $create_contribution['id'];
+				$create_note['note'] = $params['notes'];
+				$create_note['privacy'] = 0;
+				$create_note_result = civicrm_api('Note', 'create', $create_note);
+				if ($create_note_result['is_error']) {
+					return civicrm_api3_create_error("API Error: ".$create_note_result['error_message']);
+				}
+			}
+		}
 		return civicrm_api3_create_success($create_contribution['values'], array(), 'MhApi', 'addcontribution');
 	}		
 }
