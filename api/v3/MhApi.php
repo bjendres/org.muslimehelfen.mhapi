@@ -309,7 +309,7 @@ function civicrm_api3_mh_api_addcontribution($params) {
 	$params['version'] = 3;
 	$params['sequential'] = 1;
 	$params['receive_date'] = date('YmdHis');
-	$params['source'] = "Online-Spende";
+	$params['source'] = "Webseite";
 	unset($params['check_permissions']);
 	$create_contribution = civicrm_api('Contribution', 'create', $params);
 	if ($create_contribution['is_error']) {
