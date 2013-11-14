@@ -15,7 +15,7 @@ function civicrm_api3_mh_api_getcontact($params) {
 	$create_if_not_found = FALSE;
 	$fuzzy_match_threshold = 0.7;
 	$new_contact_tag_name = "Neuer Kontakt";
-	$new_address_location = "Privat";
+	$new_address_location = 1; // "Privat"
 	$activity_type_name = "Adressprüfung";
 	$contact_parameters = array('email', 'first_name', 'last_name', 'contact_type', 'prefix', 'gender');
 	$contact_address_parameters = array('street_address', 'country', 'postal_code', 'city');
