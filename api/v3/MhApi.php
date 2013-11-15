@@ -179,7 +179,6 @@ function civicrm_api3_mh_api_getcontact($params) {
 			}
 
 			if ($activity_type_id) {
-				error_log($activity_type_id);
 				// Compile activity message
 				$text = "<h3>Abweichende Angaben zu Kontakt ${contact_data['sort_name']}.</h3>\n";
 				$text .= "<table><thead><th>Attribut</th><th>aktueller Wert</th><th>übertragener Wert</th></thead><tbody>\n";
@@ -272,10 +271,8 @@ function civicrm_api3_mh_api_addcontribution($params) {
 	}*/
 
 	// look up financial type id
-	error_log($params['financial_type']);
 	if (isset($params['financial_type']) && isset($FINANCIAL_TYP_MAPPING[$params['financial_type']])) {
 		$params['financial_type'] = $FINANCIAL_TYP_MAPPING[$params['financial_type']];
-		error_log($params['financial_type']);
 	}
 
 	if (!isset($params['financial_type_id'])) {

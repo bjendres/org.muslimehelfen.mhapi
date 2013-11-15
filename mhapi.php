@@ -11,8 +11,8 @@ require_once 'mhapi.civix.php';
 function mhapi_civicrm_alterAPIPermissions($entity, $action, &$params, &$permissions)
 {
 	// modify permissions for MHAPI permissions API extension
-  $permissions['permissions']['getcontact'] = array('access CiviCRM', 'add contacts');
-  $permissions['permissions']['addcontribution'] = array('access CiviCRM', 'access CiviContribute', 'edit contributions', 'make online contributions');
+  $permissions['mh_api']['getcontact'] = array('access CiviCRM', 'add contacts');
+  $permissions['mh_api']['addcontribution'] = array('access CiviCRM', 'access CiviContribute', 'edit contributions', 'make online contributions');
 }
 
 
