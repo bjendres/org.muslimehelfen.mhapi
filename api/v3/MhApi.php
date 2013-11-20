@@ -100,7 +100,7 @@ function civicrm_api3_mh_api_getcontact($params) {
 			$create_address_query['contact_id'] = $contact_id;
 			$create_address_query['location_type_id'] = $new_address_location;
 			if (isset($country2id[$country_name])) {
-				$create_address_query['country_id'] = $countries[$country_name];
+				$create_address_query['country_id'] = $country2id[$country_name];
 			} else {
 				error_log("org.muslimehelfen.mhapi: Unknown country '$country_name'.");
 			}
