@@ -1,0 +1,23 @@
+Version History
+===============
+
+
+Version 0.5
+===========
+- MhApi.addcontribution: extended by SEPA fields. Will now create SEPA OOFF mandates.
+- MhApi.addcontribution: paypal contributions will be closed
+- MhApi.getcontact: fixed Activity creation for 4.4
+
+
+Version 0.4
+===========
+- fixed permissions
+- MhApi.getcontact: fixed country lookup
+
+
+Version 0.3
+===========
+- MhApi.addcontribution: add notes
+- MhApi.addcontribution: financial type mapping
+- MhApi.addcontribution: changed 'source' to "Website"
+- MhApi.addcontribution: fixed contribution status

@@ -201,7 +201,12 @@ function civicrm_api3_mh_api_getcontact($params) {
 				} else {
 					// set the activity as a target
 					$activity_id = $create_activity_result['id'];
-					CRM_Core_DAO::executeQuery("INSERT IGNORE INTO civicrm_activity_target (`activity_id`, `target_contact_id`) VALUES ($activity_id, $contact_id);");
+					if (CRM_Utils_System::version() >= '4.4.1') {
+						CRM_Core_DAO::executeQuery("INSERT IGNORE INTO civicrm_activity_contact (`activity_id`, `contact_id`, `record_type_id`) VALUES ($activity_id, $contact_id, 3);");
+					} else {
+						// this doesn't work any more with 4.4.x
+						CRM_Core_DAO::executeQuery("INSERT IGNORE INTO civicrm_activity_target (`activity_id`, `target_contact_id`) VALUES ($activity_id, $contact_id);");
+					}
 				}
 			}
 		}
@@ -240,17 +245,97 @@ function civicrm_api3_mh_api_addcontribution($params) {
 		"Zakatu-l-Fitr"				=> "Zakau-l-fitr"
 	);
 	
-	// look up payment type
-	if (!isset($params['payment_instrument_id'])) {
-		if (!isset($params['payment_instrument'])) {
-			return civicrm_api3_create_error("Neither payment_instrument nor payment_instrument_id given.");
+	// look up financial type id
+	if (isset($params['financial_type']) && isset($FINANCIAL_TYP_MAPPING[$params['financial_type']])) {
+		$params['financial_type'] = $FINANCIAL_TYP_MAPPING[$params['financial_type']];
+	}
+	if (!isset($params['financial_type_id'])) {
+		if (!isset($params['financial_type'])) {
+			return civicrm_api3_create_error("Neither financial_type nor financial_type_id given.");
 		} else {
-			$params['payment_instrument_id'] = _mh_lookup_option_value('payment_instrument', $params['payment_instrument']);
-			if ($params['payment_instrument_id']==NULL) {
-				return civicrm_api3_create_error("Cannot resolve payment_instrument ".$params['payment_instrument']);
+			$query = "SELECT id FROM civicrm_financial_type WHERE name = %1";
+			$query_parameters = array(1 => array($params['financial_type'],'String'));
+			$params['financial_type_id'] = CRM_Core_DAO::singleValueQuery($query, $query_parameters);
+			if ($params['financial_type_id']==NULL) {
+				return civicrm_api3_create_error("Cannot resolve financial_type ".$params['financial_type']);
 			}
-			unset($params['payment_instrument']);
+			unset($params['financial_type']);
 		}
+	}	
+
+	// check/set source
+	if (!isset($params['source'])) {
+		$params['source'] = "Online-Spende";		
+	}
+
+	// look up campaign
+	if (!isset($params['contribution_campaign_id'])) {
+		if (!isset($params['contribution_campaign'])) {
+			return civicrm_api3_create_error("Neither contribution_campaign nor contribution_campaign_id given.");
+		} else {
+			$campaign_query = civicrm_api('Campaign', 'get', array('version' => 3, 'sequential' => 1, 'external_identifier' => $params['contribution_campaign']));
+			if ($campaign_query['is_error']) {
+				return civicrm_api3_create_error("API Error: ".$campaign_query['error_message']);
+			} elseif ($campaign_query['count']==0) {
+				return civicrm_api3_create_error("Cannot find campaign ".$params['contribution_campaign']);
+			} else {
+				unset($params['contribution_campaign']);
+				$params['contribution_campaign_id'] = $campaign_query['values'][0]['id'];
+			}
+		}
+	}
+
+	// SWITCH by payment type
+	if (!isset($params['payment_instrument'])) {
+		return civicrm_api3_create_error("payment_instrument not given.");
+	} else if ($params['payment_instrument']=='SEPA DD One-off Transaction') {
+		$contribution_result = _mh_create_sepa_contribution($params, 'OOFF');
+	} else if ($params['payment_instrument']=='SEPA DD Recurring Transaction') {
+		$contribution_result = _mh_create_sepa_contribution($params, 'RCUR');
+	// not yet active: } else if ($params['payment_instrument']=='Paypal') {
+	//	$contribution_result = _mh_create_paypal_contribution($params);
+	} else {
+		$contribution_result = _mh_create_contribution($params);
+	}
+
+	if ($contribution_result['is_error']) {
+		return civicrm_api3_create_error("API Error: ".$contribution_result['error_message']);
+	} else {
+		// everything seems to be fine, add a note if requested
+		if (isset($params['notes'])) {
+			if ($params['notes']==' /   / ') $params['notes']='';
+			if (strlen($params['notes'])>0) {
+				// add note
+				$create_note = array();
+				$create_note['version'] = 3;
+				$create_note['sequential'] = 1;
+				$create_note['entity_table'] = 'civicrm_contribution';
+				$create_note['entity_id'] = $contribution_result['id'];
+				$create_note['note'] = $params['notes'];
+				$create_note['privacy'] = 0;
+				$create_note_result = civicrm_api('Note', 'create', $create_note);
+				if ($create_note_result['is_error']) {
+					return civicrm_api3_create_error("API Error: ".$create_note_result['error_message']);
+				}
+			}
+		}
+		return civicrm_api3_create_success($contribution_result['values'], array(), 'MhApi', 'addcontribution');
+	}
+}
+
+
+
+/*********************************************************************************
+ **								Contribution Creators    						**
+ ********************************************************************************/
+
+function _mh_create_contribution($params) {
+	if (!isset($params['payment_instrument_id'])) {
+		$params['payment_instrument_id'] = _mh_lookup_option_value('payment_instrument', $params['payment_instrument']);
+		if ($params['payment_instrument_id']==NULL) {
+			return civicrm_api3_create_error("Cannot resolve payment_instrument ".$params['payment_instrument']);
+		}
+		unset($params['payment_instrument']);
 	}
 
 	// set contribution status to 2 (Pending)
@@ -270,77 +355,113 @@ function civicrm_api3_mh_api_addcontribution($params) {
 		}
 	}*/
 
-	// look up financial type id
-	if (isset($params['financial_type']) && isset($FINANCIAL_TYP_MAPPING[$params['financial_type']])) {
-		$params['financial_type'] = $FINANCIAL_TYP_MAPPING[$params['financial_type']];
-	}
-
-	if (!isset($params['financial_type_id'])) {
-		if (!isset($params['financial_type'])) {
-			return civicrm_api3_create_error("Neither financial_type nor financial_type_id given.");
-		} else {
-			$query = "SELECT id FROM civicrm_financial_type WHERE name = %1";
-			$query_parameters = array(1 => array($params['financial_type'],'String'));
-			$params['financial_type_id'] = CRM_Core_DAO::singleValueQuery($query, $query_parameters);
-			if ($params['financial_type_id']==NULL) {
-				return civicrm_api3_create_error("Cannot resolve financial_type ".$params['financial_type']);
-			}
-			unset($params['financial_type']);
-		}
-	}	
-
-	// look up campaign
-	if (!isset($params['contribution_campaign_id'])) {
-		if (!isset($params['contribution_campaign'])) {
-			return civicrm_api3_create_error("Neither contribution_campaign nor contribution_campaign_id given.");
-		} else {
-			$campaign_query = civicrm_api('Campaign', 'get', array('version' => 3, 'sequential' => 1, 'external_identifier' => $params['contribution_campaign']));
-			if ($campaign_query['is_error']) {
-				return civicrm_api3_create_error("API Error: ".$campaign_query['error_message']);
-			} elseif ($campaign_query['count']==0) {
-				return civicrm_api3_create_error("Cannot find campaign ".$params['contribution_campaign']);
-			} else {
-				unset($params['contribution_campaign']);
-				$params['contribution_campaign_id'] = $campaign_query['values'][0]['id'];
-			}
-		}
-	}
-
 	// then, create the contribution
 	$params['version'] = 3;
 	$params['sequential'] = 1;
 	$params['receive_date'] = date('YmdHis');
-	$params['source'] = "Online-Spende";
 	unset($params['check_permissions']);
-	$create_contribution = civicrm_api('Contribution', 'create', $params);
-	if ($create_contribution['is_error']) {
-		return civicrm_api3_create_error("API Error: ".$create_contribution['error_message']);
-	} else {
-
-		// check for notes
-		if (isset($params['notes'])) {
-			if ($params['notes']==' /   / ') $params['notes']='';
-			if (strlen($params['notes'])>0) {
-				// add note
-				$create_note = array();
-				$create_note['version'] = 3;
-				$create_note['sequential'] = 1;
-				$create_note['entity_table'] = 'civicrm_contribution';
-				$create_note['entity_id'] = $create_contribution['id'];
-				$create_note['note'] = $params['notes'];
-				$create_note['privacy'] = 0;
-				$create_note_result = civicrm_api('Note', 'create', $create_note);
-				if ($create_note_result['is_error']) {
-					return civicrm_api3_create_error("API Error: ".$create_note_result['error_message']);
-				}
-			}
-		}
-		return civicrm_api3_create_success($create_contribution['values'], array(), 'MhApi', 'addcontribution');
-	}		
+	return civicrm_api('Contribution', 'create', $params);
 }
 
+function _mh_create_paypal_contribution($params) {
+	if (!isset($params['payment_instrument_id'])) {
+		$params['payment_instrument_id'] = _mh_lookup_option_value('payment_instrument', $params['payment_instrument']);
+		if ($params['payment_instrument_id']==NULL) {
+			return civicrm_api3_create_error("Cannot resolve payment_instrument ".$params['payment_instrument']);
+		}
+		unset($params['payment_instrument']);
+	}
 
+	// set contribution status to 1 (closed)
+	if (!isset($params['contribution_status'])) unset($params['contribution_status']);
+	unset($params['check_permissions']);
 
+	$params['contribution_status_id'] = 1;
+	$params['version'] = 3;
+	$params['sequential'] = 1;
+	$params['receive_date'] = date('YmdHis');
+	return civicrm_api('Contribution', 'create', $params);
+}
+
+function _mh_create_sepa_contribution($params, $mode) {
+	if (!isset($params['payment_instrument_id'])) {
+		$params['payment_instrument_id'] = _mh_lookup_option_value('payment_instrument', $params['payment_instrument']);
+		if ($params['payment_instrument_id']==NULL) {
+			return civicrm_api3_create_error("Cannot resolve payment_instrument ".$params['payment_instrument']);
+		}
+		unset($params['payment_instrument']);
+	}
+
+	// some sanity checks
+	if (!isset($params['iban']) || strlen($params['iban'])<12) {
+		return array('is_error'=>1, 'error_message'=>"Invalid 'iban' parameter.");
+	} else if (!isset($params['bic']) || strlen($params['bic'])<6) {
+		return array('is_error'=>1, 'error_message'=>"Invalid 'bic' parameter.");
+	} else if (!isset($params['datum']) || strlen($params['datum'])!=10) {
+		return array('is_error'=>1, 'error_message'=>"Invalid 'datum' parameter.");
+	}
+
+	// lookup creditor
+	$creditor = civicrm_api('SepaCreditor', 'getsingle', array('version'=>3, 'mandate_active'=>1));
+	if ($creditor['is_error']) {
+		return $creditor;
+	}
+
+	// create mandate and contribution
+	if ($mode=='OOFF') {
+	    // first create a contribution
+	    $contribution_data = array(
+	        'version'                   => 3,
+	        'contact_id'                => $params['contact_id'],
+	        'total_amount'              => $params['total_amount'],
+	        'campaign_id'               => $params['campaign_id'],
+	        'financial_type_id'         => $params['financial_type_id'],
+	        'payment_instrument_id'     => $params['payment_instrument_id'],
+	        'contribution_status_id'    => 2,
+	        'receive_date'              => $params['datum'],
+	        'source'                    => $params['source'],
+	      );
+
+	    $contribution = civicrm_api('Contribution', 'create', $contribution_data);
+	    if ($contribution['is_error']) {
+	    	return $contribution;
+	    }
+
+	    // next, create mandate
+	    $mandate_data = array(
+	        'version'                   => 3,
+	        'debug'                     => 1,
+	        'reference'                 => "WILL BE SET BY HOOK",
+	        'contact_id'                => $params['contact_id'],
+	        'source'                    => $params['source'],
+	        'entity_table'              => 'civicrm_contribution',
+	        'entity_id'                 => $contribution['id'],
+	        'creation_date'             => date('YmdHis'),
+	        'validation_date'           => date('YmdHis'),
+	        'date'                      => $params['datum'],
+	        'iban'                      => $params['iban'],
+	        'bic'                       => $params['bic'],
+	        'status'                    => 'OOFF',
+	        'type'                      => 'OOFF',
+	        'creditor_id'               => $creditor['id'],
+	        'is_enabled'                => 1,
+	      );
+	    // call the hook for mandate generation
+	    // TODO: Hook not working: CRM_Utils_SepaCustomisationHooks::create_mandate($mandate_data);
+	    sepa_civicrm_create_mandate($mandate_data);
+
+	    $mandate = civicrm_api('SepaMandate', 'create', $mandate_data);
+	    if ($mandate['is_error']) {
+	    	return $mandate;
+	    } else {
+	    	// everyhing o.k
+		    return $contribution;
+	    }
+
+	} else {
+		return civicrm_api3_create_error("SEPA recurring contributions not yet implemented");		
+	}
+}
 
 
 

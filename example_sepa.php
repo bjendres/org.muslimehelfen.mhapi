@@ -12,7 +12,6 @@ $contact_information['country'] = 'Deutschland';									// or "Österreich", "S
 $contact_information['postal_code'] = '53111';
 $contact_information['city'] = 'Bonn';
 $contact_information['phone'] = '0228 96104990';
-$contact_information['city'] = 'Bonn';
 $contact_information['create_if_not_found'] = '1';
 
 // overwrite with your credentials
@@ -25,18 +24,21 @@ if ($contact_info['id']) {
 	$contribution_information = array();
 	$contribution_information['contact_id'] = $contact_info['id'];
 	$contribution_information['financial_type'] = 'Ramadanhilfe';
-	$contribution_information['payment_instrument'] = 'Kreditkarte';					
+	$contribution_information['payment_instrument'] = 'SEPA DD One-off Transaction';					
 	$contribution_information['contribution_campaign'] = '111111';
 	$contribution_information['total_amount'] = '100.00';								// needs to have two postfix digits
 	$contribution_information['currency'] = 'EUR';										// or e.g.: 'CHF'
 	$contribution_information['contribution_status'] = 'In Bearbeitung';				// or e.g.: 'Abgeschlossen'
 	$contribution_information['is_test'] = '0';											// set to '0' for real contributions
-
+	$contribution_information['iban'] = 'DE47200411440799723300';
+	$contribution_information['bic'] = 'COBADEHD044';
+	$contribution_information['datum'] = date('Y-m-d');
+ 
 
 	$result = mh_civicrm_create_contribution($contribution_information);
 	print_r($result);
 } else {
-	print_r("Fehler beim der Zuordnung des Kontakts.\n");
+	print_r("Fehler bei der Zuordnung des Kontakts.\n");
 }
 
 
@@ -56,7 +58,6 @@ function mh_civicrm_get_contact($contact_information) {
 	$query['entity'] = 'MhApi';
 	$query['action'] = 'getcontact';
 
-	print_r($query);
 
 	$curl = curl_init();
 	curl_setopt($curl, CURLOPT_POST, 1);
