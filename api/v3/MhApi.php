@@ -201,7 +201,12 @@ function civicrm_api3_mh_api_getcontact($params) {
 				} else {
 					// set the activity as a target
 					$activity_id = $create_activity_result['id'];
-					CRM_Core_DAO::executeQuery("INSERT IGNORE INTO civicrm_activity_target (`activity_id`, `target_contact_id`) VALUES ($activity_id, $contact_id);");
+					if (CRM_Utils_System::version() >= '4.4.1') {
+						CRM_Core_DAO::executeQuery("INSERT IGNORE INTO civicrm_activity_contact (`activity_id`, `contact_id`, `record_type_id`) VALUES ($activity_id, $contact_id, 3);");
+					} else {
+						// this doesn't work any more with 4.4.x
+						CRM_Core_DAO::executeQuery("INSERT IGNORE INTO civicrm_activity_target (`activity_id`, `target_contact_id`) VALUES ($activity_id, $contact_id);");
+					}
 				}
 			}
 		}
