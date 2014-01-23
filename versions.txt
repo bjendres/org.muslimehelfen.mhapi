@@ -2,6 +2,11 @@ Version History
 ===============
 
 
+Version 0.5.1
+=============
+- MhApi.addcontribution: extended by SEPA fields. Will now create SEPA RCUR mandates.
+- 
+
 Version 0.5
 ===========
 - MhApi.addcontribution: extended by SEPA fields. Will now create SEPA OOFF mandates.

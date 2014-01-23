@@ -384,6 +384,7 @@ function _mh_create_paypal_contribution($params) {
 }
 
 function _mh_create_sepa_contribution($params, $mode) {
+	$timestamp = date('YmdHis');
 	if (!isset($params['payment_instrument_id'])) {
 		$params['payment_instrument_id'] = _mh_lookup_option_value('payment_instrument', $params['payment_instrument']);
 		if ($params['payment_instrument_id']==NULL) {
@@ -414,6 +415,7 @@ function _mh_create_sepa_contribution($params, $mode) {
 	        'version'                   => 3,
 	        'contact_id'                => $params['contact_id'],
 	        'total_amount'              => $params['total_amount'],
+	        'currency' 		            => 'EUR',
 	        'campaign_id'               => $params['campaign_id'],
 	        'financial_type_id'         => $params['financial_type_id'],
 	        'payment_instrument_id'     => $params['payment_instrument_id'],
@@ -436,8 +438,8 @@ function _mh_create_sepa_contribution($params, $mode) {
 	        'source'                    => $params['source'],
 	        'entity_table'              => 'civicrm_contribution',
 	        'entity_id'                 => $contribution['id'],
-	        'creation_date'             => date('YmdHis'),
-	        'validation_date'           => date('YmdHis'),
+	        'creation_date'             => $timestamp,
+	        'validation_date'           => $timestamp,
 	        'date'                      => $params['datum'],
 	        'iban'                      => $params['iban'],
 	        'bic'                       => $params['bic'],
@@ -457,6 +459,73 @@ function _mh_create_sepa_contribution($params, $mode) {
 	    	// everyhing o.k
 		    return $contribution;
 	    }
+
+	} else if ($mode=='RCUR') {
+		// verify/process some parameters
+		if (!isset($params['dekade']) || $params['dekade']<1 || $params['dekade'] > 3) {
+			return array('is_error'=>1, 'error_message'=>"Invalid 'dekade' parameter, value not in [1,2,3]");
+		} else {
+			$cycle_day = (int) ($params['dekade'] * 10) - 5;
+		}
+
+		if (!isset($params['turnus']) || $params['turnus'] < 1 || $params['turnus'] > 24) {
+			return array('is_error'=>1, 'error_message'=>"Invalid 'turnus' parameter.");
+		}
+
+	    // first create a contribution
+	    $contribution_data = array(
+	        'version'                   => 3,
+	        'contact_id'                => $params['contact_id'],
+	        'amount' 		            => $params['total_amount'],
+	        'currency' 		            => 'EUR',
+	        'campaign_id'               => $params['campaign_id'],
+	        'financial_type_id'         => $params['financial_type_id'],
+	        'payment_instrument_id'     => $params['payment_instrument_id'],
+	        'contribution_status_id'    => 2,
+	        'cycle_day'					=> $cycle_day,
+	        'start_date'              	=> $params['datum'],
+	        'create_date'				=> $timestamp,
+	        'modified_date'				=> $timestamp,
+	        'frequency_unit'			=> 'month',
+	        'frequency_interval'		=> (int) $params['turnus'],
+	        'is_email_receipt'			=> 0
+	      );
+
+	    $contribution = civicrm_api('ContributionRecur', 'create', $contribution_data);
+	    if ($contribution['is_error']) {
+	    	return $contribution;
+	    }
+
+	    // next, create mandate
+	    $mandate_data = array(
+	        'version'                   => 3,
+	        'debug'                     => 1,
+	        'reference'                 => "WILL BE SET BY HOOK",
+	        'contact_id'                => $params['contact_id'],
+	        'source'                    => $params['source'],
+	        'entity_table'              => 'civicrm_contribution_recur',
+	        'entity_id'                 => $contribution['id'],
+	        'creation_date'             => $timestamp,
+	        'validation_date'           => $timestamp,
+	        'date'                      => $params['datum'],
+	        'iban'                      => $params['iban'],
+	        'bic'                       => $params['bic'],
+	        'type'                      => 'RCUR',
+	        'status'                    => 'FRST',
+	        'creditor_id'               => $creditor['id'],
+	        'is_enabled'                => 1,
+	      );
+	    // call the hook for mandate generation
+	    // TODO: Hook not working: CRM_Utils_SepaCustomisationHooks::create_mandate($mandate_data);
+	    sepa_civicrm_create_mandate($mandate_data);
+
+	    $mandate = civicrm_api('SepaMandate', 'create', $mandate_data);
+	    if ($mandate['is_error']) {
+	    	return $mandate;
+	    } else {
+	    	// everyhing o.k
+		    return $contribution;
+	    }		
 
 	} else {
 		return civicrm_api3_create_error("SEPA recurring contributions not yet implemented");		
