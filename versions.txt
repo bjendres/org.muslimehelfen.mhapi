@@ -5,13 +5,23 @@ Version History
 Version 0.5.1
 =============
 - MhApi.addcontribution: extended by SEPA fields. Will now create SEPA RCUR mandates.
-- 
+
 
 Version 0.5
 ===========
 - MhApi.addcontribution: extended by SEPA fields. Will now create SEPA OOFF mandates.
 - MhApi.addcontribution: paypal contributions will be closed
 - MhApi.getcontact: fixed Activity creation for 4.4
+
+
+v0.4.2
+======
+- FIX: do not take deleted contacts into account for contact lookup
+
+
+v0.4.1
+======
+- FIX: compatibility issue with CiviCRM 4.4 on activity creation
 
 
 Version 0.4

@@ -52,14 +52,16 @@ function civicrm_api3_mh_api_getcontact($params) {
 
 	// iterate through email list and see if we have a match
 	foreach ($email_query['values'] as $email_data) {
-		$candidate_query = civicrm_api('Contact', 'get', array('version' => 3, 'sequential' => 1, 'id' => $email_data['contact_id']));
-		if ($candidate_query['is_error']) {
-			error_log("org.muslimehelfen.mhapi: API Error: ".$candidate_query['error_message']);
-			return civicrm_api3_create_error("API Error: ".$candidate_query['error_message']);
-		} 
+		$candidate_data = civicrm_api('Contact', 'getsingle', array('version' => 3, 'sequential' => 1, 'id' => $email_data['contact_id']));
+		if ($candidate_data['is_error']) {
+			error_log("org.muslimehelfen.mhapi: API Error: ".$candidate_data['error_message']);
+			return civicrm_api3_create_error("API Error: ".$candidate_data['error_message']);
+		}
+
+		// check if the contact is deleted (see MH ticket #447)
+		if ($candidate_data['contact_is_deleted']) continue;
 
 		// check if the contact is a match:
-		$candidate_data = $candidate_query['values'][0];
 		$first_name_similarity = _mh_stringSimiliarity($params['first_name'], $candidate_data['first_name']);
 		$last_name_similarity = _mh_stringSimiliarity($params['last_name'], $candidate_data['last_name']);
 		$similarity = $first_name_similarity * $last_name_similarity;
